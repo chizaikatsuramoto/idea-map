@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>アイデアつながりマップ</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+
+    <h1>アイデアつながりマップ</h1>
+
+    <div class="main">
+
+        <!-- 左側 -->
+        <div class="container">
+
+            <label>作品名</label><br>
+            <input type="text"
+                   id="workName"
+                   placeholder="作品名を入力">
+
+            <br><br>
+
+            <label>参考にした作品</label><br>
+            <select id="parentWork">
+                <option value="">なし</option>
+            </select>
+
+            <br><br>
+
+            <label>何を参考にした？</label><br>
+            <input type="text"
+                   id="idea"
+                   placeholder="例：色、形、動く仕組み">
+
+            <br><br>
+
+            <button id="sendBtn">
+                送信
+            </button>
+
+            <br><br>
+
+            <h2>みんなのアイデア</h2>
+
+            <div id="list"></div>
+
+            <hr>
+
+            <button id="clearBtn">
+                データを消す
+            </button>
+
+        </div>
+
+        <!-- 右側 -->
+        <div id="map"></div>
+
+    </div>
+
+   <script type="module" src="script.js"></script>
+
+</body>
+</html>
