@@ -34,7 +34,6 @@ const ideaInput =
     document.getElementById("idea");
 
 let records = [];
-let logs = [];
 
 /* --------------------
    表示更新
@@ -148,10 +147,6 @@ function updateScreen() {
             }
         );
 
-    /* --------------------
-       ノードクリック
-    -------------------- */
-
     network.on(
         "click",
         function(params){
@@ -200,10 +195,6 @@ function updateScreen() {
     );
 }
 
-/* --------------------
-   Firebase読込
--------------------- */
-
 onValue(
     ref(db, "ideas"),
     (snapshot) => {
@@ -229,7 +220,6 @@ onValue(
         updateScreen();
     }
 );
-
 /* --------------------
    投稿
 -------------------- */
@@ -264,26 +254,6 @@ document
         const workId =
             Date.now();
 
-        logs.push({
-
-            time:
-                new Date()
-                .toLocaleString(),
-
-            action:
-                "投稿",
-
-            work:
-                workName,
-
-            parent:
-                parentWork,
-
-            idea:
-                idea
-
-        });
-
         push(
             ref(db, "ideas"),
             {
@@ -305,56 +275,6 @@ document
 
             }
         );
-
-        /* --------------------
-           スプレッドシート保存
-        -------------------- */
-
-        fetch(
-            "https://script.google.com/macros/s/AKfycbzaGPjXRZq5piHWcZfe8cCLG7VuFemwoofS2s61jcIbmqatRupoKq0jpXz36Qk7RLWpeQ/exec",
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body: JSON.stringify({
-
-                    studentName:
-                        "未入力",
-
-                    workName:
-                        workName,
-
-                    parentWork:
-                        parentWork,
-
-                    idea:
-                        idea,
-
-                    workId:
-                        workId
-
-                })
-            }
-        )
-        .then(() => {
-
-            console.log(
-                "スプレッドシート保存成功"
-            );
-
-        })
-        .catch(error => {
-
-            console.error(
-                "スプレッドシート保存失敗",
-                error
-            );
-
-        });
 
         document
             .getElementById("workName")
@@ -393,68 +313,45 @@ document
 );
 
 /* --------------------
-   CSV出力
+   スプレッドシート出力
 -------------------- */
 
-const csvBtn =
+const sheetBtn =
     document.getElementById(
-        "csvBtn"
+        "sheetBtn"
     );
 
-if(csvBtn){
+if(sheetBtn){
 
-    csvBtn.addEventListener(
+    sheetBtn.addEventListener(
         "click",
-        exportCSV
+        exportToSheet
     );
 
 }
 
-function exportCSV(){
+function exportToSheet(){
 
-    let csv =
-        "時刻,操作,作品,参考作品,参考内容\n";
+    fetch(
+        "https://script.google.com/macros/s/AKfycbzaGPjXRZq5piHWcZfe8cCLG7VuFemwoofS2s61jcIbmqatRupoKq0jpXz36Qk7RLWpeQ/exec",
+        {
+            method: "POST",
 
-    logs.forEach(log => {
+            mode: "no-cors",
 
-        csv +=
-            `"${log.time}",` +
-            `"${log.action}",` +
-            `"${log.work}",` +
-            `"${log.parent}",` +
-            `"${log.idea}"\n`;
+            headers: {
+                "Content-Type":
+                    "text/plain"
+            },
 
-    });
+            body: JSON.stringify(
+                records
+            )
+        }
+    );
 
-    const blob =
-        new Blob(
-            [csv],
-            {
-                type:
-                    "text/csv"
-            }
-        );
-
-    const url =
-        URL.createObjectURL(
-            blob
-        );
-
-    const a =
-        document.createElement(
-            "a"
-        );
-
-    a.href =
-        url;
-
-    a.download =
-        "idea_log.csv";
-
-    a.click();
-
-    URL.revokeObjectURL(
-        url
+    alert(
+        "スプレッドシートへ送信しました"
     );
 }
 
