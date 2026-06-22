@@ -34,6 +34,7 @@ const ideaInput =
     document.getElementById("idea");
 
 let records = [];
+let logs = [];
 
 /* --------------------
    表示更新
@@ -60,19 +61,19 @@ function updateScreen() {
 
         let parentText = "なし";
 
-        if(data.parentWork !== ""){
+        if (data.parentWork !== "") {
 
             const parent =
-                records.find(r =>
+                records.find(
+                    r =>
                     r.workId ==
                     data.parentWork
                 );
 
-            if(parent){
+            if (parent) {
                 parentText =
                     parent.workName;
             }
-
         }
 
         list.innerHTML += `
@@ -84,7 +85,6 @@ function updateScreen() {
             </div>
             <hr>
         `;
-
     });
 
     const nodes =
@@ -96,14 +96,14 @@ function updateScreen() {
                 label: data.workName
 
             }))
-
         );
 
     const edges =
         new vis.DataSet(
 
             records
-            .filter(data =>
+            .filter(
+                data =>
                 data.parentWork !== ""
             )
             .map(data => ({
@@ -122,33 +122,82 @@ function updateScreen() {
                     data.idea
 
             }))
-
         );
 
     const container =
         document.getElementById("map");
 
-    new vis.Network(
+    const network =
+        new vis.Network(
 
-        container,
+            container,
 
-        {
-            nodes,
-            edges
-        },
-
-        {
-            layout: {
-                hierarchical: {
-                    direction: "LR"
-                }
+            {
+                nodes,
+                edges
             },
 
-            physics: false
+            {
+                layout: {
+                    hierarchical: {
+                        direction: "LR"
+                    }
+                },
+
+                physics: false
+            }
+        );
+
+    /* --------------------
+       ノードクリック
+    -------------------- */
+
+    network.on(
+        "click",
+        function(params){
+
+            if(
+                params.nodes.length === 0
+            ){
+                return;
+            }
+
+            const nodeId =
+                params.nodes[0];
+
+            const work =
+                records.find(
+                    r =>
+                    r.workId ==
+                    nodeId
+                );
+
+            if(!work){
+                return;
+            }
+
+            let dateText =
+                "記録なし";
+
+            if(work.timestamp){
+
+                dateText =
+                    new Date(
+                        work.timestamp
+                    )
+                    .toLocaleString(
+                        "ja-JP"
+                    );
+            }
+
+            alert(
+                "作品名：" +
+                work.workName +
+                "\n\n投稿日時：" +
+                dateText
+            );
         }
-
     );
-
 }
 
 /* --------------------
@@ -178,65 +227,144 @@ onValue(
         }
 
         updateScreen();
-
     }
 );
 
 /* --------------------
-   送信
+   投稿
 -------------------- */
 
 document
 .getElementById("sendBtn")
-.addEventListener("click", () => {
+.addEventListener(
+    "click",
+    () => {
 
-    const workName =
-        document
-        .getElementById("workName")
-        .value
-        .trim();
+        const workName =
+            document
+            .getElementById("workName")
+            .value
+            .trim();
 
-    const parentWork =
-        document
-        .getElementById("parentWork")
-        .value;
+        const parentWork =
+            document
+            .getElementById("parentWork")
+            .value;
 
-    const idea =
-        document
-        .getElementById("idea")
-        .value
-        .trim();
+        const idea =
+            document
+            .getElementById("idea")
+            .value
+            .trim();
 
-    if(workName === ""){
-        return;
-    }
+        if(workName === ""){
+            return;
+        }
 
-    push(
-        ref(db, "ideas"),
-        {
-            workId:
-                Date.now(),
+        const workId =
+            Date.now();
 
-            workName:
+        logs.push({
+
+            time:
+                new Date()
+                .toLocaleString(),
+
+            action:
+                "投稿",
+
+            work:
                 workName,
 
-            parentWork:
+            parent:
                 parentWork,
 
             idea:
                 idea
-        }
-    );
 
-    document
-        .getElementById("workName")
-        .value = "";
+        });
 
-    document
-        .getElementById("idea")
-        .value = "なし";
+        push(
+            ref(db, "ideas"),
+            {
 
-});
+                workId:
+                    workId,
+
+                workName:
+                    workName,
+
+                parentWork:
+                    parentWork,
+
+                idea:
+                    idea,
+
+                timestamp:
+                    Date.now()
+
+            }
+        );
+
+        /* --------------------
+           スプレッドシート保存
+        -------------------- */
+
+        fetch(
+            "https://script.google.com/macros/s/AKfycbzaGPjXRZq5piHWcZfe8cCLG7VuFemwoofS2s61jcIbmqatRupoKq0jpXz36Qk7RLWpeQ/exec",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    studentName:
+                        "未入力",
+
+                    workName:
+                        workName,
+
+                    parentWork:
+                        parentWork,
+
+                    idea:
+                        idea,
+
+                    workId:
+                        workId
+
+                })
+            }
+        )
+        .then(() => {
+
+            console.log(
+                "スプレッドシート保存成功"
+            );
+
+        })
+        .catch(error => {
+
+            console.error(
+                "スプレッドシート保存失敗",
+                error
+            );
+
+        });
+
+        document
+            .getElementById("workName")
+            .value = "";
+
+        document
+            .getElementById("idea")
+            .value = "なし";
+    }
+);
 
 /* --------------------
    全削除
@@ -244,28 +372,101 @@ document
 
 document
 .getElementById("clearBtn")
-.addEventListener("click", () => {
+.addEventListener(
+    "click",
+    () => {
 
-    if(
-        confirm(
-            "全部消しますか？"
-        )
-    ){
+        if(
+            confirm(
+                "全部消しますか？"
+            )
+        ){
 
-        remove(
-            ref(db, "ideas")
-        );
-
+            remove(
+                ref(
+                    db,
+                    "ideas"
+                )
+            );
+        }
     }
-
-});
+);
 
 /* --------------------
-   なし設定
+   CSV出力
 -------------------- */
 
-ideaInput.value = "なし";
-ideaInput.disabled = true;
+const csvBtn =
+    document.getElementById(
+        "csvBtn"
+    );
+
+if(csvBtn){
+
+    csvBtn.addEventListener(
+        "click",
+        exportCSV
+    );
+
+}
+
+function exportCSV(){
+
+    let csv =
+        "時刻,操作,作品,参考作品,参考内容\n";
+
+    logs.forEach(log => {
+
+        csv +=
+            `"${log.time}",` +
+            `"${log.action}",` +
+            `"${log.work}",` +
+            `"${log.parent}",` +
+            `"${log.idea}"\n`;
+
+    });
+
+    const blob =
+        new Blob(
+            [csv],
+            {
+                type:
+                    "text/csv"
+            }
+        );
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+    const a =
+        document.createElement(
+            "a"
+        );
+
+    a.href =
+        url;
+
+    a.download =
+        "idea_log.csv";
+
+    a.click();
+
+    URL.revokeObjectURL(
+        url
+    );
+}
+
+/* --------------------
+   入力制御
+-------------------- */
+
+ideaInput.value =
+    "なし";
+
+ideaInput.disabled =
+    true;
 
 parentSelect
 .addEventListener(
@@ -273,7 +474,8 @@ parentSelect
     () => {
 
         if(
-            parentSelect.value === ""
+            parentSelect.value
+            === ""
         ){
 
             ideaInput.value =
@@ -281,7 +483,6 @@ parentSelect
 
             ideaInput.disabled =
                 true;
-
         }
         else{
 
@@ -292,13 +493,9 @@ parentSelect
 
                 ideaInput.value =
                     "";
-
             }
 
             ideaInput.disabled =
                 false;
-
         }
-
-    }
-);
+    });
