@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -18,13 +17,13 @@
 
     <div class="main">
 
-        <!-- 左側 -->
         <div class="container">
 
             <label>作品名</label><br>
-            <input type="text"
-                   id="workName"
-                   placeholder="作品名を入力">
+            <input
+                type="text"
+                id="workName"
+                placeholder="作品名を入力">
 
             <br><br>
 
@@ -36,14 +35,21 @@
             <br><br>
 
             <label>何を参考にした？</label><br>
-            <input type="text"
-                   id="idea"
-                   placeholder="例：色、形、動く仕組み">
+            <input
+                type="text"
+                id="idea"
+                placeholder="例：色、形、動く仕組み">
 
             <br><br>
 
             <button id="sendBtn">
                 送信
+            </button>
+
+            <br><br>
+
+            <button id="csvBtn">
+                CSV出力
             </button>
 
             <br><br>
@@ -60,12 +66,14 @@
 
         </div>
 
-        <!-- 右側 -->
         <div id="map"></div>
 
     </div>
 
-   <script type="module" src="script.js"></script>
+    <script
+        type="module"
+        src="script.js">
+    </script>
 
 </body>
 </html>
