@@ -311,7 +311,95 @@ document
         }
     }
 );
+/* --------------------
+   CSV出力
+-------------------- */
 
+const csvBtn =
+    document.getElementById("csvBtn");
+
+if(csvBtn){
+
+    csvBtn.addEventListener(
+        "click",
+        exportCSV
+    );
+
+}
+
+function exportCSV(){
+
+    let csv =
+        "作品名,参考作品,参考内容,投稿日時\n";
+
+    records.forEach(data => {
+
+        let parentName = "";
+
+        if(data.parentWork !== ""){
+
+            const parent =
+                records.find(
+                    r =>
+                    r.workId ==
+                    data.parentWork
+                );
+
+            if(parent){
+                parentName =
+                    parent.workName;
+            }
+
+        }
+
+        let date = "";
+
+        if(data.timestamp){
+
+            date =
+                new Date(
+                    data.timestamp
+                ).toLocaleString("ja-JP");
+
+        }
+
+        csv +=
+            `"${data.workName}",` +
+            `"${parentName}",` +
+            `"${data.idea}",` +
+            `"${date}"\n`;
+
+    });
+
+    const blob =
+        new Blob(
+            [csv],
+            {
+                type:"text/csv"
+            }
+        );
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+    const a =
+        document.createElement("a");
+
+    a.href =
+        url;
+
+    a.download =
+        "idea_log.csv";
+
+    a.click();
+
+    URL.revokeObjectURL(
+        url
+    );
+
+}
 /* --------------------
    スプレッドシート出力
 -------------------- */
