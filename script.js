@@ -420,27 +420,52 @@ if(sheetBtn){
 
 function exportToSheet(){
 
+  
+
+    const exportData = records.map(record => {
+
+        let parentName = "なし";
+
+        if(record.parentWork !== ""){
+
+            const parent = records.find(
+                r => r.workId == record.parentWork
+            );
+
+            if(parent){
+                parentName = parent.workName;
+            }
+        }
+
+        return {
+
+            timestamp: record.timestamp,
+
+            workName: record.workName,
+
+            parentWork: parentName,
+
+            idea: record.idea,
+
+            workId: record.workId
+
+        };
+
+    });
+
     fetch(
         "https://script.google.com/macros/s/AKfycbzaGPjXRZq5piHWcZfe8cCLG7VuFemwoofS2s61jcIbmqatRupoKq0jpXz36Qk7RLWpeQ/exec",
         {
             method: "POST",
-
             mode: "no-cors",
-
-            headers: {
-                "Content-Type":
-                    "text/plain"
+            headers:{
+                "Content-Type":"text/plain"
             },
-
-            body: JSON.stringify(
-                records
-            )
+            body: JSON.stringify(exportData)
         }
     );
 
-    alert(
-        "スプレッドシートへ送信しました"
-    );
+    alert("スプレッドシートへ送信しました");
 }
 
 /* --------------------
