@@ -1,12 +1,60 @@
 // ========================================
 // アイデアつながりマップ
-// 作品 → 作品 のリミックスツリー版
+// Firebase Realtime Database版
 // ========================================
 
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 
-// ----------------------------------------
-// 参考にした作品の一覧を更新
-// ----------------------------------------
+import {
+    getDatabase,
+    ref,
+    push,
+    set,
+    onValue,
+    remove
+}
+from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+
+
+// ========================================
+// Firebase設定
+// ========================================
+
+const firebaseConfig = {
+    apiKey: "AIzaSyA8whWMsqzfuQJiq9A3ShwHZ2o029VtPAk",
+    authDomain: "idea-map-44e45.firebaseapp.com",
+    databaseURL: "https://idea-map-44e45-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "idea-map-44e45",
+    storageBucket: "idea-map-44e45.firebasestorage.app",
+    messagingSenderId: "139898991681",
+    appId: "1:139898991681:web:15742eb6d1f49e3b9642c0",
+    measurementId: "G-7JEMF9E1S9"
+};
+
+
+// ========================================
+// Firebase開始
+// ========================================
+
+const app = initializeApp(firebaseConfig);
+
+const db = getDatabase(app);
+
+const ideasRef = ref(db, "ideas");
+
+
+// ========================================
+// 現在の作品データ
+// ========================================
+
+let records = [];
+
+
+// ========================================
+// 参考にした作品の選択肢
+// ========================================
+
 function updateParentWork() {
 
     const parentWork =
@@ -19,140 +67,140 @@ function updateParentWork() {
     parentWork.innerHTML =
         '<option value="">なし</option>';
 
-    const records =
-        JSON.parse(
-            localStorage.getItem("ideaMap")
-        ) || [];
-
     records.forEach(data => {
 
-        // 新しいデータ
-        let workName = data.workName;
-
-        // 古いデータが残っていた場合の対応
-        if (!workName || workName.trim() === "") {
-            workName =
-                (data.myName || "作品") + "作品";
+        if (!data) {
+            return;
         }
 
         const option =
             new Option(
-                workName,
-                String(data.workId)
+                data.workName,
+                data.id
             );
 
         parentWork.appendChild(option);
 
     });
+
 }
 
 
-// ----------------------------------------
-// マップと一覧を表示
-// ----------------------------------------
-function showData() {
+// ========================================
+// 一覧表示
+// ========================================
+
+function showList() {
 
     const list =
         document.getElementById("list");
 
-    const map =
-        document.getElementById("map");
-
-    if (!list || !map) {
+    if (!list) {
         return;
     }
-
-    const records =
-        JSON.parse(
-            localStorage.getItem("ideaMap")
-        ) || [];
-
-
-    // ====================================
-    // 一覧表示
-    // ====================================
 
     list.innerHTML = "";
 
     records.forEach(data => {
 
-        let workName = data.workName;
-
-        if (!workName || workName.trim() === "") {
-            workName =
-                (data.myName || "作品") + "作品";
+        if (!data) {
+            return;
         }
 
         let parentText = "なし";
 
         if (
-            data.parentWork !== "" &&
-            data.parentWork !== null &&
-            data.parentWork !== undefined
+            data.parentWork &&
+            data.parentWork !== ""
         ) {
 
             const parent =
                 records.find(
-                    r =>
-                        String(r.workId) ===
-                        String(data.parentWork)
+                    item =>
+                        item.id ===
+                        data.parentWork
                 );
 
             if (parent) {
-
                 parentText =
                     parent.workName;
-
-                if (
-                    !parentText ||
-                    parentText.trim() === ""
-                ) {
-                    parentText =
-                        (parent.myName || "作品") +
-                        "作品";
-                }
-
             }
 
         }
 
         list.innerHTML += `
             <div>
-                ${workName}
+                ${escapeHTML(data.workName)}
                 ←
-                ${parentText}
-                （${data.idea || ""}）
+                ${escapeHTML(parentText)}
+                （${escapeHTML(data.idea || "")}）
             </div>
             <hr>
         `;
 
     });
 
+}
 
-    // ====================================
-    // ノード作成
-    // ====================================
+
+// ========================================
+// HTML文字を安全に表示
+// ========================================
+
+function escapeHTML(text) {
+
+    if (
+        text === null ||
+        text === undefined
+    ) {
+        return "";
+    }
+
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+// ========================================
+// マップ表示
+// ========================================
+
+function showMap() {
+
+    const map =
+        document.getElementById("map");
+
+    if (!map) {
+        return;
+    }
+
+
+    // -------------------------------
+    // ノード
+    // -------------------------------
 
     const nodeData = [];
 
     records.forEach(data => {
 
-        let workName = data.workName;
-
-        if (!workName || workName.trim() === "") {
-            workName =
-                (data.myName || "作品") + "作品";
+        if (!data) {
+            return;
         }
 
         nodeData.push({
 
-            id: String(data.workId),
+            id: data.id,
 
-            label: workName,
+            label: data.workName,
 
             shape: "box",
 
-            margin: 10,
+            margin: 12,
 
             font: {
                 size: 20
@@ -167,26 +215,24 @@ function showData() {
         new vis.DataSet(nodeData);
 
 
-    // ====================================
-    // 矢印作成
-    // ====================================
+    // -------------------------------
+    // 矢印
+    // -------------------------------
 
     const edgeData = [];
 
     records.forEach(data => {
 
         if (
-            data.parentWork !== "" &&
-            data.parentWork !== null &&
-            data.parentWork !== undefined
+            data.parentWork &&
+            data.parentWork !== ""
         ) {
 
-            // 参考元の作品が実際に存在するか確認
             const parentExists =
                 records.some(
-                    r =>
-                        String(r.workId) ===
-                        String(data.parentWork)
+                    item =>
+                        item.id ===
+                        data.parentWork
                 );
 
             if (parentExists) {
@@ -194,12 +240,13 @@ function showData() {
                 edgeData.push({
 
                     from:
-                        String(data.parentWork),
+                        data.parentWork,
 
                     to:
-                        String(data.workId),
+                        data.id,
 
-                    arrows: "to",
+                    arrows:
+                        "to",
 
                     label:
                         data.idea || "",
@@ -222,9 +269,9 @@ function showData() {
         new vis.DataSet(edgeData);
 
 
-    // ====================================
-    // マップ作成
-    // ====================================
+    // -------------------------------
+    // マップ設定
+    // -------------------------------
 
     const networkData = {
 
@@ -294,37 +341,46 @@ function showData() {
     };
 
 
-    // 既存のマップがあれば破棄
+    // -------------------------------
+    // 古いマップを削除
+    // -------------------------------
+
     if (window.ideaNetwork) {
 
         window.ideaNetwork.destroy();
 
+        window.ideaNetwork = null;
+
     }
 
 
-    // マップを作る
+    // -------------------------------
+    // マップ作成
+    // -------------------------------
+
     window.ideaNetwork =
         new vis.Network(
-
             map,
-
             networkData,
-
             options
-
         );
 
 
-    // マップを中央に表示
+    // -------------------------------
+    // 中央に表示
+    // -------------------------------
+
     if (records.length > 0) {
 
         setTimeout(() => {
 
-            window.ideaNetwork.fit({
+            if (window.ideaNetwork) {
 
-                animation: true
+                window.ideaNetwork.fit({
+                    animation: true
+                });
 
-            });
+            }
 
         }, 100);
 
@@ -333,133 +389,226 @@ function showData() {
 }
 
 
-// ----------------------------------------
-// 送信ボタン
-// ----------------------------------------
-document
-.getElementById("sendBtn")
-.addEventListener("click", () => {
+// ========================================
+// 画面更新
+// ========================================
 
-    const workName =
-        document
-        .getElementById("workName")
-        .value
-        .trim();
-
-
-    const parentWork =
-        document
-        .getElementById("parentWork")
-        .value;
-
-
-    const idea =
-        document
-        .getElementById("idea")
-        .value
-        .trim();
-
-
-    // 作品名が空の場合
-    if (workName === "") {
-
-        alert("作品名を入力してください。");
-
-        return;
-
-    }
-
-
-    // 新しい作品データ
-    const data = {
-
-        workId:
-            Date.now(),
-
-        workName:
-            workName,
-
-        parentWork:
-            parentWork,
-
-        idea:
-            idea
-
-    };
-
-
-    // 保存済みデータ
-    let records =
-        JSON.parse(
-            localStorage.getItem("ideaMap")
-        ) || [];
-
-
-    // 新しい作品を追加
-    records.push(data);
-
-
-    // 保存
-    localStorage.setItem(
-
-        "ideaMap",
-
-        JSON.stringify(records)
-
-    );
-
-
-    // 入力欄を空にする
-    document
-    .getElementById("workName")
-    .value = "";
-
-    document
-    .getElementById("idea")
-    .value = "";
-
-
-    // 画面更新
-    showData();
+function updateScreen() {
 
     updateParentWork();
 
-});
+    showList();
+
+    showMap();
+
+}
 
 
-// ----------------------------------------
-// データを消すボタン
-// ----------------------------------------
-document
-.getElementById("clearBtn")
-.addEventListener("click", () => {
+// ========================================
+// Firebaseからリアルタイム取得
+// ========================================
 
-    if (
-        !confirm(
-            "すべてのデータを消しますか？"
-        )
-    ) {
+onValue(
 
-        return;
+    ideasRef,
+
+    snapshot => {
+
+        const data =
+            snapshot.val();
+
+        records = [];
+
+        if (data) {
+
+            Object.entries(data).forEach(
+                ([key, value]) => {
+
+                    records.push({
+
+                        id: key,
+
+                        workName:
+                            value.workName || "",
+
+                        parentWork:
+                            value.parentWork || "",
+
+                        idea:
+                            value.idea || "",
+
+                        timestamp:
+                            value.timestamp || 0
+
+                    });
+
+                }
+            );
+
+        }
+
+
+        // 古い順
+        records.sort(
+            (a, b) =>
+                (a.timestamp || 0) -
+                (b.timestamp || 0)
+        );
+
+
+        updateScreen();
+
+    },
+
+    error => {
+
+        console.error(
+            "Firebase読み込みエラー:",
+            error
+        );
+
+        alert(
+            "Firebaseからデータを読み込めませんでした。\n" +
+            "Realtime Databaseのルールを確認してください。"
+        );
 
     }
 
+);
 
-    localStorage.removeItem(
-        "ideaMap"
+
+// ========================================
+// 送信
+// ========================================
+
+document
+    .getElementById("sendBtn")
+    .addEventListener(
+        "click",
+        async () => {
+
+            const workName =
+                document
+                    .getElementById("workName")
+                    .value
+                    .trim();
+
+            const parentWork =
+                document
+                    .getElementById("parentWork")
+                    .value;
+
+            const idea =
+                document
+                    .getElementById("idea")
+                    .value
+                    .trim();
+
+
+            if (workName === "") {
+
+                alert(
+                    "作品名を入力してください。"
+                );
+
+                return;
+
+            }
+
+
+            try {
+
+                const newIdeaRef =
+                    push(ideasRef);
+
+
+                await set(
+                    newIdeaRef,
+                    {
+
+                        workName:
+                            workName,
+
+                        parentWork:
+                            parentWork,
+
+                        idea:
+                            idea,
+
+                        timestamp:
+                            Date.now()
+
+                    }
+                );
+
+
+                document
+                    .getElementById("workName")
+                    .value = "";
+
+                document
+                    .getElementById("idea")
+                    .value = "";
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Firebase保存エラー:",
+                    error
+                );
+
+                alert(
+                    "データを保存できませんでした。\n" +
+                    error.message
+                );
+
+            }
+
+        }
     );
 
 
-    showData();
+// ========================================
+// 全データ削除
+// ========================================
 
-    updateParentWork();
+document
+    .getElementById("clearBtn")
+    .addEventListener(
+        "click",
+        async () => {
 
-});
+            const answer =
+                confirm(
+                    "Firebaseに保存されている作品データをすべて消しますか？"
+                );
+
+            if (!answer) {
+                return;
+            }
 
 
-// ----------------------------------------
-// 最初に表示
-// ----------------------------------------
-showData();
+            try {
 
-updateParentWork();
+                await remove(ideasRef);
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Firebase削除エラー:",
+                    error
+                );
+
+                alert(
+                    "データを削除できませんでした。\n" +
+                    error.message
+                );
+
+            }
+
+        }
+    );
